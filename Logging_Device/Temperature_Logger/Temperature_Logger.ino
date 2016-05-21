@@ -6,7 +6,7 @@
  * This code tests the temperature, humidity and heat index once a minute using DHT11 sensor,
  * and send it to a server to save the data for future use.
  * 
- * This code is base on BasicHTTPClient.ino example which comes with NodeMCU library, 
+ * This code is based on BasicHTTPClient.ino example which comes with NodeMCU library, 
  * and DHTtester example which comes with DHT sensor library.
  */
  
