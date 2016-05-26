@@ -10,4 +10,3 @@ Will be added to the repository later.
 
 ### Data Analysis
 Analysis of the logged data using Python and [matplotlib](http://matplotlib.org/).
-Will be added to the repository later.
