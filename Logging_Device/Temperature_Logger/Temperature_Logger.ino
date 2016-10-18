@@ -8,21 +8,24 @@
  * 
  * This code is based on BasicHTTPClient.ino example which comes with NodeMCU library, 
  * and DHTtester example which comes with DHT sensor library.
+ * 
+ * -----------------------------------------------------------------------------------------
+ * Used libraries:
+ * adafruit/DHT-sensor-library v1.2.3
+ * https://github.com/adafruit/DHT-sensor-library/
+ * 
+ * bblanchon/ArduinoJson v5.6.7
+ * https://github.com/bblanchon/ArduinoJson/
  */
  
 #include <Arduino.h>
-
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
-
 #include <ESP8266HTTPClient.h>
-
-#define USE_SERIAL Serial
-
 #include "DHT.h"
-#include <ctime>
+#include <ArduinoJson.h>
 
-#include "Constants.h"
+#include "Config.h"
 
 ESP8266WiFiMulti WiFiMulti;
 
@@ -46,33 +49,31 @@ ESP8266WiFiMulti WiFiMulti;
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(DHTPIN, DHTTYPE);
 
-static const int INTERVAL_BETWEEN_MEASUREMENTS = 1000 * 60; // 60 seconds
-char url[200];
 
 void setup() {
 
-    USE_SERIAL.begin(115200);
-   // USE_SERIAL.setDebugOutput(true);
+    Serial.begin(115200);
+   // Serial.setDebugOutput(true);
 
-    USE_SERIAL.println();
-    USE_SERIAL.println();
-    USE_SERIAL.println();
+    Serial.println();
+    Serial.println();
+    Serial.println();
 
     for(uint8_t t = 4; t > 0; t--) {
-        USE_SERIAL.printf("[SETUP] WAIT %d...\n", t);
-        USE_SERIAL.flush();
+        Serial.printf("[SETUP] WAIT %d...\n", t);
+        Serial.flush();
         delay(1000);
     }
 
-    WiFiMulti.addAP(Constants::WIFI_SSID, Constants::WIFI_PASSWORD);
+    WiFiMulti.addAP(Config::WIFI_SSID, Config::WIFI_PASSWORD);
 
 }
 
 void loop() {
   
     // wait for WiFi connection
-    if((WiFiMulti.run() == WL_CONNECTED)) {
-
+    if((WiFiMulti.run() == WL_CONNECTED))
+    {
         HTTPClient http;
 
         // Reading temperature or humidity takes about 250 milliseconds!
@@ -89,46 +90,59 @@ void loop() {
 
         float hic = dht.computeHeatIndex(t, h, false);
 
-        USE_SERIAL.print("[HTTP] begin...\n");
+        Serial.print("[HTTP] begin...\n");
 
-        int h_hundreded = int(h*100.0);
-        int t_hundreded = int(t*100.0);
-        int hic_hundreded = int(hic*100.0);
-        
-        sprintf(url,
-                "%s/log.php?logger_name=%s&log_time=%d&humidity=%d.%d&temperature_celsius=%d.%d&heat_index_celsius=%d.%d",
-                Constants::LOG_SERVER_BASE_URL,
-                Constants::LOGGER_NAME,
-                time(NULL),
-                h_hundreded / 100, h_hundreded % 100,       // A shitty workaround which compensates for the fact that Arduino IDE does not support float formatting.
-                t_hundreded / 100, t_hundreded % 100,       // Also here.
-                hic_hundreded / 100, hic_hundreded % 100);  // And here.
+        Serial.println(Config::LOGGING_URL);
+        http.begin(Config::LOGGING_URL); //HTTP
 
-        USE_SERIAL.println(url);
-        http.begin(url); //HTTP
-
-        USE_SERIAL.print("[HTTP] GET...\n");
+        Serial.print("[HTTP] POST...\n");
         // start connection and send HTTP header
-        int httpCode = http.GET();
+        http.addHeader("Content-Type", "application/json");
+        
+        StaticJsonBuffer<200> jsonBuffer;
+        
+        JsonObject& root = jsonBuffer.createObject();
+        root["logger"] = Config::LOGGER_ID;
+        root["humidity"] = h;
+        root["temperature_celsius"] = t;
+        root["heat_index_celsius"] = hic;
+
+        int buffer_size = root.measureLength() + 1;
+
+        char buffer[buffer_size];
+        root.printTo(buffer, buffer_size);
+        root.printTo(Serial);
+        Serial.println();
+
+        Serial.println(Config::LOGGING_URL);
+        http.begin(Config::LOGGING_URL); //HTTP
+
+        Serial.print("[HTTP] POST...\n");
+        // start connection and send HTTP header
+        http.addHeader("Content-Type", "application/json");
+
+        int httpCode = http.POST((char*)buffer);
+
+        http.writeToStream(&Serial);
+        Serial.println();
 
         // httpCode will be negative on error
         if(httpCode > 0) {
             // HTTP header has been send and Server response header has been handled
-            USE_SERIAL.printf("[HTTP] GET... code: %d\n", httpCode);
+            Serial.printf("[HTTP] POST... code: %d\n", httpCode);
 
             // file found at server
             if(httpCode == HTTP_CODE_OK) {
                 String payload = http.getString();
-                USE_SERIAL.println(payload);
+                Serial.println(payload);
             }
         } else {
-            USE_SERIAL.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+            Serial.printf("[HTTP] POST... failed, error: %s\n", http.errorToString(httpCode).c_str());
         }
 
         http.end();
     }
 
-    
-    // Wait a few seconds between measurements.
-    delay(INTERVAL_BETWEEN_MEASUREMENTS);
+    // Wait between measurements.
+    delay(Config::MILLIS_BETWEEN_MEASUREMENTS);
 }
