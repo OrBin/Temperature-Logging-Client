@@ -5,8 +5,7 @@ Temperature logging and analysis
 Using NodeMCU with a DHT11 temperature & humidity sensor.
 
 ### Server
-A simple web server to support saving the data.
-Will be added to the repository later.
+A web server to support saving, getting and watching the data. Code can be found [here](https://github.com/OrBin/Temperature_Logging-Server).
 
 ### Data Analysis
 Analysis of the logged data using Python and [matplotlib](http://matplotlib.org/).
