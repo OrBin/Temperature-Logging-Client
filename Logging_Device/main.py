@@ -6,14 +6,19 @@ import config
 import json
 import urequests
 
-def connect(timeout=0):
+def connect(timeout_sec=0):
     sta_if = network.WLAN(network.STA_IF)
     if not sta_if.isconnected():
         sta_if.active(True)
         sta_if.connect(config.WIFI_SSID, config.WIFI_PASSWORD)
+        timeout_end = time.time() + timeout_sec
+
         while not sta_if.isconnected():
-            pass
-        # TODO Handle timeout
+            if time.time() > timeout_end:
+                return False
+
+        return True
+
 
 def compute_heat_index(temperature_c, humidity):
     # Heat-Index calculator with celsius-grade
@@ -40,8 +45,6 @@ d = dht.DHT11(machine.Pin(4))
 
 while True:
 
-    connect()
-
     try:
         d.measure()
         temperature = d.temperature()
@@ -58,14 +61,20 @@ while True:
         json_text = json.dumps(json_object)
         print(json_text)
 
-        response = urequests.post(config.LOGGING_URL,
-                                  data=json_text,
-                                  headers={"content-type": "application/json"})
-        print(response.text)
+        if not connect(config.CONNECTION_TIMEOUT_SEC):
+            print("No connection, Skipping")
+            # TODO save data and send later (ensure server support for multiple logs post)
 
-        time.sleep(config.SECONDS_BETWEEN_MEASUREMENTS)
+        else:
+            response = urequests.post(config.LOGGING_URL,
+                                      data=json_text,
+                                      headers={"content-type": "application/json"})
+            print(response.text)
+
+        time.sleep(config.MEASUREMENT_INTERVAL_SEC)
 
     except OSError as os_error:
         if os_error.args[0] == 110: # ETIMEDOUT
             print("Cannot access sensor: timed out")
+        # TODO Handle other errors
 
