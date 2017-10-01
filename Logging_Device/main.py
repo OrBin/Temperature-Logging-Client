@@ -41,40 +41,44 @@ def compute_heat_index(temperature_c, humidity):
     return round(((heatindex_f - 32) * 5/9), 2)
 
 
-d = dht.DHT11(machine.Pin(4))
+# configure RTC.ALARM0 to be able to wake the device
+rtc = machine.RTC()
+rtc.irq(trigger=rtc.ALARM0, wake=machine.DEEPSLEEP)
 
-while True:
+# Initialize DHT22 sensor
+dht_sensor = dht.DHT22(machine.Pin(4))
 
-    try:
-        d.measure()
-        temperature = d.temperature()
-        humidity = d.humidity()
-        heat_index = compute_heat_index(temperature, humidity)
+try:
+    dht_sensor.measure()
+    temperature = dht_sensor.temperature()
+    humidity = dht_sensor.humidity()
+    heat_index = compute_heat_index(temperature, humidity)
 
-        json_object = {
-            "logger": config.LOGGER_ID,
-            "humidity": humidity,
-            "temperature_celsius": temperature,
-            "heat_index_celsius": heat_index
-        }
+    json_object = {
+        "logger": config.LOGGER_ID,
+        "humidity": humidity,
+        "temperature_celsius": temperature,
+        "heat_index_celsius": heat_index
+    }
 
-        json_text = json.dumps(json_object)
-        print(json_text)
+    json_text = json.dumps(json_object)
+    print(json_text)
 
-        if not connect(config.CONNECTION_TIMEOUT_SEC):
-            print("No connection, Skipping")
-            # TODO save data and send later (ensure server support for multiple logs post)
+    if not connect(config.CONNECTION_TIMEOUT_SEC):
+        print("No connection, Skipping")
+        # TODO save data and send later (ensure server support for multiple logs post)
 
-        else:
-            response = urequests.post(config.LOGGING_URL,
-                                      data=json_text,
-                                      headers={"content-type": "application/json"})
-            print(response.text)
+    else:
+        response = urequests.post(config.LOGGING_URL,
+                                  data=json_text,
+                                  headers={"content-type": "application/json"})
+        print(response.text)
 
-        time.sleep(config.MEASUREMENT_INTERVAL_SEC)
+except OSError as os_error:
+    if os_error.args[0] == 110: # ETIMEDOUT
+        print("Cannot access sensor: timed out")
+    # TODO Handle other errors
 
-    except OSError as os_error:
-        if os_error.args[0] == 110: # ETIMEDOUT
-            print("Cannot access sensor: timed out")
-        # TODO Handle other errors
-
+# Set RTC.ALARM0 to fire after the given interval (waking the device) and put the device to sleep
+rtc.alarm(rtc.ALARM0, config.MEASUREMENT_INTERVAL_MILLIS)
+machine.deepsleep()
