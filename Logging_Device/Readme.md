@@ -1,5 +1,6 @@
-# Logging Device
+# Temperature Logging Client
 The logging device is a [NodeMCU ESP8266](http://nodemcu.com/index_en.html), running [MicroPython firmware](https://micropython.org/) (was previously running [NodeMCU firmware](https://github.com/nodemcu/nodemcu-firmware)).
+There is also a web server to support saving, getting and watching the data. Code can be found [here](https://github.com/OrBin/Temperature_Logging-Server).
 
 This page contains instructions to install/update the code files for the logging device even though it is (most of the time) in deep sleep mode.
 
