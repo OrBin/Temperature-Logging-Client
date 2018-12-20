@@ -6,7 +6,9 @@ import config
 import json
 import urequests
 
+
 sta_if = network.WLAN(network.STA_IF)
+
 
 def connect(timeout_sec=0):
     if sta_if.isconnected():
@@ -43,6 +45,10 @@ def compute_heat_index(temperature_c, humidity):
 
     return round(((heatindex_f - 32) * 5/9), 2)
 
+
+# Deactivating access point. This didn't work when put inside a function :(
+ap = network.WLAN(network.AP_IF)
+ap.active(False)
 
 # Initialize DHT22 sensor
 dht_sensor = dht.DHT22(machine.Pin(4))
