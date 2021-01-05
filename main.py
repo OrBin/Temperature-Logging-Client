@@ -41,9 +41,9 @@ while True:
         humidity = dht_sensor.humidity()
 
         json_object = {
-            "logger": config.LOGGER_ID,
+            "logger_id": config.LOGGER_ID,
             "humidity": humidity,
-            "temperature_celsius": temperature,
+            "temperature_c": temperature,
         }
 
         json_text = json.dumps(json_object)
