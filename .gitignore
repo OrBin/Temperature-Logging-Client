@@ -1,6 +1,7 @@
 # Project-specific ignores:
 config.py
 .idea/**
+esp8266-*.bin
 
 # Created by https://www.gitignore.io/api/python,pycharm
 
